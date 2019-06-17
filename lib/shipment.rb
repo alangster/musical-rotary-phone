@@ -9,9 +9,29 @@ class Shipment
     @first_name = attributes.fetch(:first_name)
     @last_name = attributes.fetch(:last_name)
     @number = attributes.fetch(:number)
-    @order_number = attributes.fetch(:order_number)
-    @parent_number = attributes.fetch(:parent_number, "N/A")
     @shipment_date = attributes.fetch(:shipment_date)
+
+    set_defaults(attributes)
+  end
+
+  def attributes(with_computed_properties = false)
+    attrs = {
+      number: number,
+      order_number: order_number,
+      shipment_date: shipment_date,
+      first_name: first_name,
+      last_name: last_name,
+      parent_number: parent_number,
+    }
+
+    if with_computed_properties
+      attrs.merge!({
+        full_name: full_name,
+        days_ago: days_ago,
+      })
+    end
+
+    attrs
   end
 
   def to_str
@@ -36,6 +56,14 @@ class Shipment
   end
 
   private
+
+  def set_defaults(attributes)
+    %w(order_number parent_number).each do |attribute|
+      value = attributes[attribute.to_sym]
+      value = "N/A" if !value || value.empty?
+      instance_variable_set("@#{attribute}", value)
+    end
+  end
 
   def number_string
     "Number: #{number}"

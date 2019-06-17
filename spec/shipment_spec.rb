@@ -11,14 +11,16 @@ describe Shipment do
       number:        "SH432123",
       order_number:  "987654",
       shipment_date: "2018-12-10 15:08:58 -0000",
-      parent_number: "N/A"
     }
   end
 
   let(:attributes_with_parent_order) do
-    full_attributes.merge({ parent_number: "SH86739" })
+    attributes = full_attributes.merge({ parent_number: "SH86739" })
+    attributes.delete(:order_number)
+    attributes
   end
 
+  let(:default) { "N/A" }
 
   describe "#initialize" do
     context "with no parent number provided" do
@@ -28,6 +30,7 @@ describe Shipment do
         full_attributes.each do |key, value|
           expect(shipment.public_send(key)).to eq(value)
         end
+        expect(shipment.parent_number).to eq(default)
       end
     end
 
@@ -38,6 +41,7 @@ describe Shipment do
         attributes_with_parent_order.each do |key, value|
           expect(shipment.public_send(key)).to eq(value)
         end
+        expect(shipment.order_number).to eq(default)
       end
     end
   end
@@ -62,7 +66,7 @@ describe Shipment do
         shipment = Shipment.new(attributes_with_parent_order)
         expect(shipment.to_str).to eq(
           "Number: #{attributes_with_parent_order[:number]}, "\
-          "Order Number: #{attributes_with_parent_order[:order_number]}, "\
+          "Order Number: N/A, "\
           "Shipped: #{attributes_with_parent_order[:shipment_date]}, "\
           "First Name: #{attributes_with_parent_order[:first_name]}, "\
           "Last Name: #{attributes_with_parent_order[:last_name]}, "\
@@ -101,6 +105,43 @@ describe Shipment do
 
         Timecop.freeze(shipment_date + days) do
           expect(shipment.days_ago).to eq(days)
+        end
+      end
+    end
+  end
+
+  describe "#attributes" do
+    context "without computed properties" do
+      it "returns a hash of the shipment's attributes" do
+        shipment = Shipment.new(full_attributes)
+        expect(shipment.attributes).to eq({
+          number: full_attributes[:number],
+          order_number: full_attributes[:order_number],
+          shipment_date: full_attributes[:shipment_date],
+          first_name: full_attributes[:first_name],
+          last_name: full_attributes[:last_name],
+          parent_number: "N/A"
+        })
+      end
+    end
+
+    context "with computed properties" do
+      let(:shipment_date) { DateTime.parse(full_attributes[:shipment_date]) }
+
+      it "returns a hash of the shipment's attributes plus full name and days ago" do
+        shipment = Shipment.new(full_attributes)
+        days = 100
+        Timecop.freeze(shipment_date + days) do
+          expect(shipment.attributes(true)).to eq({
+            number: full_attributes[:number],
+            order_number: full_attributes[:order_number],
+            shipment_date: full_attributes[:shipment_date],
+            first_name: full_attributes[:first_name],
+            last_name: full_attributes[:last_name],
+            parent_number: "N/A",
+            full_name: "#{full_attributes[:first_name]} #{full_attributes[:last_name]}",
+            days_ago: days
+          })
         end
       end
     end
